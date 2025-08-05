@@ -1,0 +1,41 @@
+annotations:
+  artifacthub.io/links: |-
+    - name: support
+    url: https://discord.com/invite/tVsPTHWTtr
+  max_scale_version: 24.04.1
+  min_scale_version: 24.04.0
+  truecharts.org/category: GameServers
+  truecharts.org/max_helm_version: "3.17"
+  truecharts.org/min_helm_version: "3.14"
+  truecharts.org/train: stable
+apiVersion: v2
+appVersion: latest
+dependencies:
+  - name: common
+    version: 28.15.0
+    repository: oci://tccr.io/truecharts
+    condition: ""
+    alias: ""
+    tags: []
+    import-values: []
+deprecated: false
+description: "Runs the Ark: Survival Ascended game server."
+home: https://truecharts.org/charts/stable/arksurvivalascended
+icon: https://truecharts.org/img/hotlink-ok/chart-icons/arksurvivalascended.webp
+keywords:
+  - arksurvivalascended
+  - ark
+  - arksa
+  - asa
+  - GameServers
+kubeVersion: '>=1.24.0-0'
+maintainers:
+  - name: TrueCharts
+    email: info@truecharts.org
+    url: https://truecharts.org
+name: arksurvivalascended
+sources:
+  - https://github.com/truecharts/charts/tree/master/charts/stable/arksurvivalascended
+  - https://hub.docker.com/r/acekorneya/asa_server
+type: application
+version: 0.1.1
