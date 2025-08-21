@@ -86,26 +86,26 @@ workload:
             requests:
               memory: "16Gi"
               cpu: "2"
-          # probes:
-          #   liveness:
-          #     type: tcp
-          #     port: "{{ .Values.service.rcon.ports.rcon.port }}"
-          #     spec:
-          #       initialDelaySeconds: 60
-          #       periodSeconds: 28
-          #   readiness:
-          #     type: tcp
-          #     port: "{{ .Values.service.rcon.ports.rcon.port }}"
-          #     spec:
-          #       initialDelaySeconds: 60
-          #       periodSeconds: 26
-          #       failureThreshold: 6
-          #   startup:
-          #     type: tcp
-          #     port: "{{ .Values.service.rcon.ports.rcon.port }}"
-          #     spec:
-          #       initialDelaySeconds: 60
-          #       periodSeconds: 25
+          probes:
+            liveness:
+              type: tcp
+              port: "{{ .Values.service.rcon.ports.rcon.port }}"
+              spec:
+                initialDelaySeconds: 60
+                periodSeconds: 28
+            readiness:
+              type: tcp
+              port: "{{ .Values.service.rcon.ports.rcon.port }}"
+              spec:
+                initialDelaySeconds: 60
+                periodSeconds: 26
+                failureThreshold: 6
+            startup:
+              type: tcp
+              port: "{{ .Values.service.rcon.ports.rcon.port }}"
+              spec:
+                initialDelaySeconds: 60
+                periodSeconds: 25
 
 persistence:
   game:
