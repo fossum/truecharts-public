@@ -1,18 +1,18 @@
 image:
   repository: docker.io/acekorneya/asa_server
   # Written against docker version 2.1 latest.
-  tag: latest
+  tag: 2_1_latest
 
 securityContext:
   pod:
     fsGroup: 568
   container:
-    PUID: 568
+    PUID: 7777
     capabilities:
       add: ["CHOWN", "FOWNER", "SETGID", "SETUID"]
       # add: ["AUDIT_WRITE", "CHOWN", "FOWNER", "DAC_OVERRIDE", "SETGID", "SETUID"]
-    runAsUser: 568
-    runAsGroup: 568
+    runAsUser: 7777
+    runAsGroup: 7777
     runAsNonRoot: false
     readOnlyRootFilesystem: false
     allowPrivilegeEscalation: true
