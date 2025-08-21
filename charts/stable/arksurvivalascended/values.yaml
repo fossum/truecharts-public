@@ -3,17 +3,19 @@ image:
   # Written against docker version 2.1 latest.
   tag: latest
 
-# securityContext:
-#   pod:
-#     fsGroup: 1001
-#   container:
-#     # capabilities:
-#     #   add: ["AUDIT_WRITE", "CHOWN", "FOWNER", "DAC_OVERRIDE", "SETGID", "SETUID"]
-#     runAsUser: 1001
-#     runAsGroup: 1001
-#     runAsNonRoot: false
-#     readOnlyRootFilesystem: false
-#     allowPrivilegeEscalation: true
+securityContext:
+  pod:
+    fsGroup: 568
+  container:
+    PUID: 568
+    capabilities:
+      add: ["CHOWN", "FOWNER", "SETGID", "SETUID"]
+      # add: ["AUDIT_WRITE", "CHOWN", "FOWNER", "DAC_OVERRIDE", "SETGID", "SETUID"]
+    runAsUser: 568
+    runAsGroup: 568
+    runAsNonRoot: false
+    readOnlyRootFilesystem: false
+    allowPrivilegeEscalation: true
 
 service:
   main:
@@ -56,8 +58,8 @@ workload:
       containers:
         main:
           env:
-            # PUID: "{{ .Values.securityContext.container.runAsUser }}"
-            # PGID: "{{ .Values.securityContext.container.runAsGroup }}"
+            PUID: "{{ .Values.securityContext.container.runAsUser }}"
+            PGID: "{{ .Values.securityContext.container.runAsGroup }}"
             BATTLEEYE: "TRUE"	# Set to TRUE to use BattleEye, FALSE to not use BattleEye
             RCON_ENABLED: "TRUE"  # Needed for Graceful Shutdown and health probes.
             DISPLAY_POK_MONITOR_MESSAGE: "FALSE"  # TRUE to Show the Server Monitor Messages / Update Monitor Shutdown
