@@ -19,13 +19,13 @@ dependencies:
     tags: []
     import-values: []
 deprecated: false
-description: "Runs the Ark: Survival Ascended game server."
+description: "Runs the Ark: Survival Ascended game server with POK-manager."
 home: https://truecharts.org/charts/stable/arksurvivalascended
 icon: https://truecharts.org/img/hotlink-ok/chart-icons/arksurvivalascended.webp
 keywords:
-  - arksurvivalascended
   - ark
   - arksa
+  - arksurvivalascended
   - asa
   - GameServers
 kubeVersion: '>=1.24.0-0'
@@ -38,4 +38,4 @@ sources:
   - https://github.com/truecharts/charts/tree/master/charts/stable/arksurvivalascended
   - https://hub.docker.com/r/acekorneya/asa_server
 type: application
-version: 0.1.1
+version: 0.1.2
