@@ -27,12 +27,12 @@ service:
         port: 7777
         protocol: udp
       peer:
-        enabled: true
+        enabled: false
         port: 7778
         # This should always be main +1
         protocol: udp
   steam:
-    enabled: true
+    enabled: false
     externalTrafficPolicy: Local
     ports:
       query:
@@ -60,8 +60,11 @@ workload:
           env:
             PUID: "{{ .Values.securityContext.container.runAsUser }}"
             PGID: "{{ .Values.securityContext.container.runAsGroup }}"
-            BATTLEEYE: "TRUE"	# Set to TRUE to use BattleEye, FALSE to not use BattleEye
             RCON_ENABLED: "TRUE"  # Needed for Graceful Shutdown and health probes.
+            ASA_PORT: "{{ .Values.service.main.ports.main.port }}"  # The game port for the server
+            RCON_PORT: "{{ .Values.service.rcon.ports.rcon.port }}"  # Rcon Port Use for Most Server Operations
+
+            BATTLEEYE: "TRUE"	# Set to TRUE to use BattleEye, FALSE to not use BattleEye
             DISPLAY_POK_MONITOR_MESSAGE: "FALSE"  # TRUE to Show the Server Monitor Messages / Update Monitor Shutdown
             UPDATE_SERVER: "TRUE"  # Enable or disable update checks
             CHECK_FOR_UPDATE_INTERVAL: 24  # Check for Updates interval in hours
@@ -75,8 +78,6 @@ workload:
             SESSION_NAME: "Server_name"  # The session name for the server
             SERVER_ADMIN_PASSWORD: "MyPassword"  # The admin password for the server
             SERVER_PASSWORD: "" # Set a server password or leave it blank (ONLY NUMBERS AND CHARACTERS ARE ALLOWED BY DEVS)
-            ASA_PORT: "{{ .Values.service.main.ports.main.port }}"  # The game port for the server
-            RCON_PORT: "{{ .Values.service.rcon.ports.rcon.port }}"  # Rcon Port Use for Most Server Operations
             MAX_PLAYERS: 127  # Max allowed players
             CLUSTER_ID: "cluster"  # The Cluster ID for the server
             MOD_IDS: ""  # Add your mod IDs here, separated by commas, e.g., 123456789,987654321
@@ -110,12 +111,10 @@ workload:
                 periodSeconds: 25
 
 persistence:
-  game:
-    enabled: true
-    mountPath: /usr/games/.wine/drive_c/POK/Steam/steamapps/common/ARK Survival Ascended Dedicated Server/ShooterGame
   base:
     enabled: true
-    mountPath: /usr/games/.wine/drive_c/POK/Steam/steamapps/common/ARK Survival Ascended Dedicated Server
+    mountPath: /home/pok/arkserver
+    size: 30Gi
   # backup:
   #   enabled: true
   #   mountPath: /ark/backup
@@ -127,10 +126,11 @@ persistence:
   #   mountPath: /home/steam/.steam/steamapps
   cluster:
     enabled: true
-    mountPath: /usr/games/.wine/drive_c/POK/Steam/steamapps/common/ARK Survival Ascended Dedicated Server/ShooterGame/Saved/clusters
+    mountPath: /home/pok/arkserver/ShooterGame/Saved/clusters
+    size: 5Gi
   save:
     enabled: true
-    mountPath: /usr/games/.wine/drive_c/POK/Steam/steamapps/common/ARK Survival Ascended Dedicated Server/ShooterGame/Saved
+    mountPath: /home/pok/arkserver/ShooterGame/Saved
   # shootergame:
   #   enabled: true
   #   mountPath: /arkserver/ShooterGame
