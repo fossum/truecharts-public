@@ -1,0 +1,238 @@
+image:
+  repository: ghcr.io/github/copilot-cli
+  pullPolicy: IfNotPresent
+  tag: 1.0.51
+
+auth:
+  copilotToken:
+    # Existing secret that contains a GitHub token with Copilot access.
+    # Fine-grained PATs should include the Copilot Requests permission.
+    existingSecret: ""
+    key: token
+
+git:
+  sync:
+    # Enable repository synchronization for GitHub.com remote sessions.
+    enabled: false
+    # Repository must be hosted on GitHub.com for copilot --remote.
+    repository: ""
+    ref: main
+    depth: 1
+    auth:
+      # Optional existing secret for private repository sync.
+      # Expected keys are username/password by default.
+      existingSecret: ""
+      usernameKey: username
+      passwordKey: password
+
+copilot:
+  # Supported modes:
+  # - remote: interactive Copilot CLI session remotely steerable from GitHub.com
+  # - headless: TCP server mode for Copilot SDK backends
+  # Remote mode does not require an ingress because the pod connects outbound to GitHub.com.
+  mode: remote
+  workspace:
+    path: /workspace/repository
+  extraArgs: []
+
+service:
+  main:
+    enabled: '{{ eq .Values.copilot.mode "headless" }}'
+    ports:
+      main:
+        enabled: '{{ eq .Values.copilot.mode "headless" }}'
+        port: 4321
+        protocol: tcp
+        targetPort: 4321
+
+securityContext:
+  container:
+    runAsUser: 568
+    runAsGroup: 568
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    privileged: false
+    capabilities:
+      add: []
+      drop:
+        - ALL
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4096Mi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+workload:
+  main:
+    podSpec:
+      initContainers:
+        prepare-workspace:
+          enabled: true
+          type: init
+          imageSelector: image
+          securityContext:
+            readOnlyRootFilesystem: false
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              mkdir -p /config /workspace /tmp
+              cat > /config/config.json <<EOF_CONFIG
+              {
+                "trustedFolders": [
+                  "{{ .Values.copilot.workspace.path }}"
+                ]
+              }
+              EOF_CONFIG
+
+              if [ -f /credentials/git/username ]; then
+                GIT_AUTH_USERNAME="$(tr -d '\r\n' </credentials/git/username)"
+                export GIT_AUTH_USERNAME
+              fi
+
+              if [ -f /credentials/git/password ]; then
+                GIT_AUTH_PASSWORD="$(tr -d '\r\n' </credentials/git/password)"
+                export GIT_AUTH_PASSWORD
+              fi
+
+              if [ "{{ .Values.git.sync.enabled }}" = "true" ]; then
+                if [ -z "{{ .Values.git.sync.repository }}" ]; then
+                  echo "git.sync.repository must be set when git.sync.enabled is true" >&2
+                  exit 1
+                fi
+
+                askpass=""
+                cleanup() {
+                  if [ -n "$askpass" ] && [ -f "$askpass" ]; then
+                    rm -f "$askpass"
+                  fi
+                }
+                trap cleanup EXIT
+
+                if [ -n "${GIT_AUTH_PASSWORD:-}" ]; then
+                  askpass="/tmp/git-askpass.sh"
+                  {
+                    printf '%s\n' '#!/bin/sh'
+                    printf '%s\n' 'case "$1" in'
+                    printf '%s\n' '  *Username*) printf '\''%s\n'\'' "${GIT_AUTH_USERNAME:-oauth2}" ;;'
+                    printf '%s\n' '  *Password*) printf '\''%s\n'\'' "${GIT_AUTH_PASSWORD}" ;;'
+                    printf '%s\n' '  *) exit 1 ;;'
+                    printf '%s\n' 'esac'
+                  } > "$askpass"
+                  chmod 700 "$askpass"
+                  export GIT_ASKPASS="$askpass"
+                  export GIT_TERMINAL_PROMPT=0
+                fi
+
+                if [ -d "{{ .Values.copilot.workspace.path }}/.git" ]; then
+                  git -C "{{ .Values.copilot.workspace.path }}" remote set-url origin "{{ .Values.git.sync.repository }}"
+                  git -C "{{ .Values.copilot.workspace.path }}" fetch --depth {{ .Values.git.sync.depth }} origin "{{ .Values.git.sync.ref }}"
+                  git -C "{{ .Values.copilot.workspace.path }}" reset --hard FETCH_HEAD
+                  git -C "{{ .Values.copilot.workspace.path }}" clean -fdx
+                else
+                  workspace_path="{{ .Values.copilot.workspace.path }}"
+                  case "$workspace_path" in
+                    /workspace/*)
+                      rm -rf "$workspace_path"
+                      ;;
+                    *)
+                      echo "copilot.workspace.path must be a non-empty path under /workspace/: $workspace_path" >&2
+                      exit 1
+                      ;;
+                  esac
+                  git clone --branch "{{ .Values.git.sync.ref }}" --depth {{ .Values.git.sync.depth }} "{{ .Values.git.sync.repository }}" "$workspace_path"
+                fi
+              elif [ ! -d "{{ .Values.copilot.workspace.path }}/.git" ]; then
+                echo "No git repository found at {{ .Values.copilot.workspace.path }}; mount one or enable git.sync" >&2
+                exit 1
+              fi
+      containers:
+        main:
+          tty: true
+          stdin: true
+          probes:
+            liveness:
+              enabled: false
+            readiness:
+              enabled: false
+            startup:
+              enabled: false
+          env:
+            HOME: /config
+            COPILOT_HOME: /config
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              if [ -f /credentials/copilot/token ]; then
+                export COPILOT_GITHUB_TOKEN="$(tr -d '\r\n' </credentials/copilot/token)"
+              fi
+
+              cd "{{ .Values.copilot.workspace.path }}"
+
+              case "{{ .Values.copilot.mode }}" in
+                headless)
+                  exec copilot --headless --port {{ .Values.service.main.ports.main.targetPort }}{{- range .Values.copilot.extraArgs }} {{ . | squote }}{{- end }}
+                  ;;
+                remote)
+                  exec copilot --remote{{- range .Values.copilot.extraArgs }} {{ . | squote }}{{- end }}
+                  ;;
+                *)
+                  echo "Unsupported copilot.mode: {{ .Values.copilot.mode }}" >&2
+                  exit 1
+                  ;;
+              esac
+
+persistence:
+  config:
+    enabled: true
+    mountPath: /config
+    targetSelectAll: true
+  workspace:
+    enabled: true
+    mountPath: /workspace
+    targetSelectAll: true
+  tmp:
+    enabled: true
+    type: emptyDir
+    mountPath: /tmp
+    targetSelectAll: true
+  copilot-token:
+    enabled: '{{ ne .Values.auth.copilotToken.existingSecret "" }}'
+    type: secret
+    objectName: '{{ .Values.auth.copilotToken.existingSecret }}'
+    defaultMode: "0400"
+    readOnly: true
+    mountPath: /credentials/copilot/token
+    subPath: '{{ .Values.auth.copilotToken.key }}'
+    targetSelector:
+      main:
+        main: {}
+  git-username:
+    enabled: '{{ and .Values.git.sync.enabled (ne .Values.git.sync.auth.existingSecret "") }}'
+    type: secret
+    objectName: '{{ .Values.git.sync.auth.existingSecret }}'
+    defaultMode: "0400"
+    readOnly: true
+    mountPath: /credentials/git/username
+    subPath: '{{ .Values.git.sync.auth.usernameKey }}'
+    targetSelector:
+      main:
+        prepare-workspace: {}
+  git-password:
+    enabled: '{{ and .Values.git.sync.enabled (ne .Values.git.sync.auth.existingSecret "") }}'
+    type: secret
+    objectName: '{{ .Values.git.sync.auth.existingSecret }}'
+    defaultMode: "0400"
+    readOnly: true
+    mountPath: /credentials/git/password
+    subPath: '{{ .Values.git.sync.auth.passwordKey }}'
+    targetSelector:
+      main:
+        prepare-workspace: {}

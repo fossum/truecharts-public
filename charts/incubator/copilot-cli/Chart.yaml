@@ -1,0 +1,43 @@
+annotations:
+  artifacthub.io/links: |-
+    - name: support
+      url: https://discord.com/invite/tVsPTHWTtr
+  max_scale_version: 24.04.1
+  min_scale_version: 24.04.0
+  truecharts.org/category: tools
+  truecharts.org/max_helm_version: "3.17"
+  truecharts.org/min_helm_version: "3.14"
+  truecharts.org/train: incubator
+apiVersion: v2
+appVersion: 1.0.51
+dependencies:
+  - name: common
+    version: 28.15.1
+    repository: oci://tccr.io/truecharts
+    condition: ""
+    alias: ""
+    tags: []
+    import-values: []
+deprecated: false
+description: Run GitHub Copilot CLI in secure remote or headless server mode on Kubernetes.
+home: https://truecharts.org/charts/incubator/copilot-cli
+icon: https://truecharts.org/img/hotlink-ok/chart-icons/copilot-cli.webp
+keywords:
+  - copilot
+  - github
+  - cli
+  - ai
+  - agent
+kubeVersion: '>=1.24.0-0'
+maintainers:
+  - name: TrueCharts
+    email: info@truecharts.org
+    url: https://truecharts.org
+name: copilot-cli
+sources:
+  - https://github.com/github/copilot-cli
+  - https://docs.github.com/en/copilot/how-tos/use-copilot-agents/use-copilot-cli
+  - https://docs.github.com/en/copilot/how-tos/copilot-sdk/set-up-copilot-sdk/backend-services
+  - https://github.com/truecharts/charts/tree/master/charts/incubator/copilot-cli
+type: application
+version: 0.1.0
