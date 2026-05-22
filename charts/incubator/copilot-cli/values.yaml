@@ -13,7 +13,7 @@ auth:
 git:
   sync:
     # Enable repository synchronization for GitHub.com remote sessions.
-    enabled: true
+    enabled: false
     # Repository must be hosted on GitHub.com for copilot --remote.
     repository: ""
     ref: main
@@ -116,14 +116,14 @@ workload:
 
                 if [ -n "${GIT_AUTH_PASSWORD:-}" ]; then
                   askpass="/tmp/git-askpass.sh"
-                  cat > "$askpass" <<'EOF_ASKPASS'
-                  #!/bin/sh
-                  case "$1" in
-                    *Username*) printf '%s\n' "${GIT_AUTH_USERNAME:-oauth2}" ;;
-                    *Password*) printf '%s\n' "${GIT_AUTH_PASSWORD}" ;;
-                    *) exit 1 ;;
-                  esac
-                  EOF_ASKPASS
+                  {
+                    printf '%s\n' '#!/bin/sh'
+                    printf '%s\n' 'case "$1" in'
+                    printf '%s\n' '  *Username*) printf '\''%s\n'\'' "${GIT_AUTH_USERNAME:-oauth2}" ;;'
+                    printf '%s\n' '  *Password*) printf '\''%s\n'\'' "${GIT_AUTH_PASSWORD}" ;;'
+                    printf '%s\n' '  *) exit 1 ;;'
+                    printf '%s\n' 'esac'
+                  } > "$askpass"
                   chmod 700 "$askpass"
                   export GIT_ASKPASS="$askpass"
                   export GIT_TERMINAL_PROMPT=0
@@ -135,8 +135,17 @@ workload:
                   git -C "{{ .Values.copilot.workspace.path }}" reset --hard FETCH_HEAD
                   git -C "{{ .Values.copilot.workspace.path }}" clean -fdx
                 else
-                  rm -rf "{{ .Values.copilot.workspace.path }}"
-                  git clone --branch "{{ .Values.git.sync.ref }}" --depth {{ .Values.git.sync.depth }} "{{ .Values.git.sync.repository }}" "{{ .Values.copilot.workspace.path }}"
+                  workspace_path="{{ .Values.copilot.workspace.path }}"
+                  case "$workspace_path" in
+                    /workspace/*)
+                      rm -rf "$workspace_path"
+                      ;;
+                    *)
+                      echo "copilot.workspace.path must be a non-empty path under /workspace/: $workspace_path" >&2
+                      exit 1
+                      ;;
+                  esac
+                  git clone --branch "{{ .Values.git.sync.ref }}" --depth {{ .Values.git.sync.depth }} "{{ .Values.git.sync.repository }}" "$workspace_path"
                 fi
               elif [ ! -d "{{ .Values.copilot.workspace.path }}/.git" ]; then
                 echo "No git repository found at {{ .Values.copilot.workspace.path }}; mount one or enable git.sync" >&2
